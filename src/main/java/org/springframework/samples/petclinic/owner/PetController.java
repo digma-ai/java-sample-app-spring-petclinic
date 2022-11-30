@@ -17,6 +17,9 @@ package org.springframework.samples.petclinic.owner;
 
 import java.util.Collection;
 import javax.validation.Valid;
+
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.util.StringUtils;
@@ -41,22 +44,27 @@ class PetController {
 	private static final String VIEWS_PETS_CREATE_OR_UPDATE_FORM = "pets/createOrUpdatePetForm";
 
 	private final OwnerRepository owners;
+	private final OpenTelemetry openTelemetry;
 
-	public PetController(OwnerRepository owners) {
+	public PetController(OwnerRepository owners, OpenTelemetry openTelemetry) {
 		this.owners = owners;
+		this.openTelemetry = openTelemetry;
 	}
 
 	@ModelAttribute("types")
+	@WithSpan
 	public Collection<PetType> populatePetTypes() {
 		return this.owners.findPetTypes();
 	}
 
 	@ModelAttribute("owner")
+	@WithSpan
 	public Owner findOwner(@PathVariable("ownerId") int ownerId) {
 		return this.owners.findById(ownerId);
 	}
 
 	@ModelAttribute("pet")
+	@WithSpan
 	public Pet findPet(@PathVariable("ownerId") int ownerId,
 			@PathVariable(name = "petId", required = false) Integer petId) {
 		return petId == null ? new Pet() : this.owners.findById(ownerId).getPet(petId);
@@ -69,7 +77,7 @@ class PetController {
 
 	@InitBinder("pet")
 	public void initPetBinder(WebDataBinder dataBinder) {
-		dataBinder.setValidator(new PetValidator());
+		dataBinder.setValidator(new PetValidator(openTelemetry));
 	}
 
 	@GetMapping("/pets/new")
